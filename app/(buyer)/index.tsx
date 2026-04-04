@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ROLE_STORAGE_KEY } from '../../screens/RoleSelectionScreen';
 
@@ -14,18 +14,16 @@ const FEATURED_PRODUCTS = [
 export default function BuyerDashboard() {
     const router = useRouter();
 
-    const handleSwitchRole = () => {
-        Alert.alert('Switch Role', 'Do you want to switch your role?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Yes, Switch',
-                style: 'destructive',
-                onPress: async () => {
-                    await AsyncStorage.removeItem(ROLE_STORAGE_KEY);
-                    router.replace('/');
-                },
-            },
-        ]);
+    const handleSignOut = async () => {
+        try {
+            // 1. Clear the role first
+            await AsyncStorage.removeItem(ROLE_STORAGE_KEY);
+            
+            // 2. Navigate to root (Role Selection) IMMEDIATELY
+            router.replace('/');
+        } catch (err) {
+            console.error('Error signing out:', err);
+        }
     };
 
     return (
@@ -33,33 +31,37 @@ export default function BuyerDashboard() {
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>🛒 Buyer Dashboard</Text>
-                <TouchableOpacity onPress={handleSwitchRole} style={styles.switchButton}>
-                    <Text style={styles.switchText}>Switch Role</Text>
-                </TouchableOpacity>
             </View>
 
-            <Text style={styles.sectionTitle}>Available Products</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+                <Text style={styles.sectionTitle}>Available Products</Text>
 
-            {FEATURED_PRODUCTS.map((item) => (
-                <View key={item.id} style={styles.card}>
-                    <View style={styles.iconBox}>
-                        <MaterialCommunityIcons name={item.icon as any} size={36} color="#FF9800" />
+                {FEATURED_PRODUCTS.map((item) => (
+                    <View key={item.id} style={styles.card}>
+                        <View style={styles.iconBox}>
+                            <MaterialCommunityIcons name={item.icon as any} size={36} color="#FF9800" />
+                        </View>
+                        <View key={item.id} style={styles.cardContent}>
+                            <Text style={styles.productName}>{item.name}</Text>
+                            <Text style={styles.productPrice}>{item.price}</Text>
+                            <Text style={styles.productSeller}>Seller: {item.seller}</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.contactBtn}
+                            onPress={() => Alert.alert('Contact', `Contacting seller for ${item.name}`)}
+                        >
+                            <MaterialCommunityIcons name="phone" size={20} color="#FFF" />
+                        </TouchableOpacity>
                     </View>
-                    <View style={styles.cardContent}>
-                        <Text style={styles.productName}>{item.name}</Text>
-                        <Text style={styles.productPrice}>{item.price}</Text>
-                        <Text style={styles.productSeller}>Seller: {item.seller}</Text>
-                    </View>
-                    <TouchableOpacity
-                        style={styles.contactBtn}
-                        onPress={() => Alert.alert('Contact', `Contacting seller for ${item.name}`)}
-                    >
-                        <MaterialCommunityIcons name="phone" size={20} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
-            ))}
+                ))}
 
-            <Text style={styles.note}>More features coming soon for buyers!</Text>
+                <Text style={styles.note}>More features coming soon for buyers!</Text>
+
+                <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
+                    <MaterialCommunityIcons name="logout" size={20} color="#FFF" />
+                    <Text style={styles.signOutText}>Sign Out</Text>
+                </TouchableOpacity>
+            </ScrollView>
         </View>
     );
 }
@@ -73,25 +75,14 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 28,
     },
     headerTitle: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#E65100',
-    },
-    switchButton: {
-        backgroundColor: '#FF9800',
-        paddingVertical: 6,
-        paddingHorizontal: 14,
-        borderRadius: 20,
-    },
-    switchText: {
-        color: '#FFF',
-        fontWeight: '600',
-        fontSize: 13,
     },
     sectionTitle: {
         fontSize: 18,
@@ -149,9 +140,25 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     note: {
-        marginTop: 20,
+        marginTop: 10,
+        marginBottom: 30,
         textAlign: 'center',
         color: '#BDBDBD',
         fontSize: 13,
+    },
+    signOutButton: {
+        flexDirection: 'row',
+        backgroundColor: '#d32f2f',
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 40,
+    },
+    signOutText: {
+        color: '#FFF',
+        fontWeight: 'bold',
+        fontSize: 16,
+        marginLeft: 10,
     },
 });

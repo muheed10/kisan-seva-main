@@ -11,24 +11,17 @@ export default function Page() {
 
     const handleSignOut = async () => {
         try {
+            // 1. Clear the role selection - this is primary
+            await AsyncStorage.removeItem(ROLE_STORAGE_KEY)
+            
+            // 2. Navigate away from the home route IMMEDIATELY
+            router.replace('/')
+
+            // 3. Trigger sign out in the background
             await signOut()
         } catch (err) {
             console.error('Error signing out:', err)
         }
-    }
-
-    const handleSwitchRole = () => {
-        Alert.alert('Switch Role', 'Do you want to switch your role?', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Yes, Switch',
-                style: 'destructive',
-                onPress: async () => {
-                    await AsyncStorage.removeItem(ROLE_STORAGE_KEY)
-                    router.replace('/')
-                },
-            },
-        ])
     }
 
     const features = [
@@ -44,7 +37,7 @@ export default function Page() {
         <View style={styles.container}>
             <SignedIn>
                 <View style={styles.header}>
-                    <Text style={styles.welcomeText}>Welcome, {user?.firstName || user?.emailAddresses[0]?.emailAddress}!</Text>
+                    <Text style={styles.welcomeText}>Welcome, {user?.firstName || user?.emailAddresses?.[0]?.emailAddress || 'User'}!</Text>
                     <Text style={styles.subText}>Kisan Seva Dashboard</Text>
                 </View>
 
@@ -63,9 +56,6 @@ export default function Page() {
                     <Text style={styles.signOutText}>Sign Out</Text>
                 </TouchableOpacity>
             </SignedIn>
-            <SignedOut>
-                <Redirect href="/(auth)/sign-in" />
-            </SignedOut>
         </View>
     )
 }

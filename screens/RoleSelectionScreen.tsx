@@ -21,15 +21,17 @@ export default function RoleSelectionScreen({ onSelectRole, loading = false }: P
     const handleSelect = async (role: UserRole) => {
         try {
             await AsyncStorage.setItem(ROLE_STORAGE_KEY, role);
-        } catch {
-            // Fail silently — the callback still fires so navigation works
+            onSelectRole(role);
+        } catch (error) {
+            console.error('Error saving role:', error);
+            // Even if save fails, proceed with navigation to keep app usable
+            onSelectRole(role);
         }
-        onSelectRole(role);
     };
 
     if (loading) {
         return (
-            <View style={[styles.container, styles.center]}>
+            <View style={styles.container}>
                 <ActivityIndicator size="large" color="#4CAF50" />
             </View>
         );
@@ -37,29 +39,26 @@ export default function RoleSelectionScreen({ onSelectRole, loading = false }: P
 
     return (
         <View style={styles.container}>
-            <Text style={styles.appName}>Kisan Seva</Text>
-            <Text style={styles.tagline}>Empowering Indian Farmers</Text>
-            <Text style={styles.question}>I am a...</Text>
+            <View style={styles.content}>
+                <Text style={styles.title}>Kisan Seva</Text>
+                <Text style={styles.subtitle}>Select your role to continue</Text>
 
-            <TouchableOpacity
-                style={[styles.roleButton, styles.farmerButton]}
-                onPress={() => handleSelect('farmer')}
-                activeOpacity={0.85}
-            >
-                <Text style={styles.emoji}>🌾</Text>
-                <Text style={styles.roleLabel}>Farmer</Text>
-                <Text style={styles.roleDescription}>Sell produce, access subsidies & weather</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.button, styles.farmerButton]}
+                    onPress={() => handleSelect('farmer')}
+                    activeOpacity={0.8}
+                >
+                    <Text style={styles.buttonText}>Farmer 🌾</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-                style={[styles.roleButton, styles.buyerButton]}
-                onPress={() => handleSelect('buyer')}
-                activeOpacity={0.85}
-            >
-                <Text style={styles.emoji}>🛒</Text>
-                <Text style={styles.roleLabel}>Buyer</Text>
-                <Text style={styles.roleDescription}>Browse and purchase fresh farm produce</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.button, styles.buyerButton]}
+                    onPress={() => handleSelect('buyer')}
+                    activeOpacity={0.8}
+                >
+                    <Text style={styles.buttonText}>Buyer 🛒</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 }
@@ -67,46 +66,37 @@ export default function RoleSelectionScreen({ onSelectRole, loading = false }: P
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F1F8E9',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 28,
-    },
-    center: {
+        backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    appName: {
-        fontSize: 36,
+    content: {
+        width: '80%',
+        alignItems: 'center',
+    },
+    title: {
+        fontSize: 32,
         fontWeight: 'bold',
         color: '#2E7D32',
-        marginBottom: 6,
-        letterSpacing: 1,
+        marginBottom: 8,
     },
-    tagline: {
-        fontSize: 15,
-        color: '#66BB6A',
-        marginBottom: 48,
-        textAlign: 'center',
+    subtitle: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 40,
     },
-    question: {
-        fontSize: 18,
-        color: '#555',
-        fontWeight: '600',
-        marginBottom: 24,
-    },
-    roleButton: {
+    button: {
         width: '100%',
-        borderRadius: 20,
-        paddingVertical: 28,
-        paddingHorizontal: 24,
+        paddingVertical: 20,
+        borderRadius: 12,
         alignItems: 'center',
+        justifyContent: 'center',
         marginBottom: 20,
-        elevation: 4,
+        elevation: 3,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     farmerButton: {
         backgroundColor: '#4CAF50',
@@ -114,19 +104,9 @@ const styles = StyleSheet.create({
     buyerButton: {
         backgroundColor: '#FF9800',
     },
-    emoji: {
-        fontSize: 48,
-        marginBottom: 10,
-    },
-    roleLabel: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#FFF',
-        marginBottom: 6,
-    },
-    roleDescription: {
-        fontSize: 13,
-        color: 'rgba(255,255,255,0.85)',
-        textAlign: 'center',
+    buttonText: {
+        color: '#FFFFFF',
+        fontSize: 20,
+        fontWeight: '600',
     },
 });

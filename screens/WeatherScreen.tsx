@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 
-// Placeholder values that indicate a key has not been configured
 const PLACEHOLDER_KEYS = ['your_openweathermap_api_key_here', 'undefined', ''];
 
 function isKeyValid(key: string | undefined): boolean {
@@ -21,43 +21,51 @@ function getWeatherIcon(conditionCode: number): string {
     return 'weather-partly-cloudy';
 }
 
-// Dummy forecast to preserve UI structure
-const DUMMY_FORECAST = [
-    { day: 'Tue', temp: '19°C', icon: 'weather-sunny' },
-    { day: 'Wed', temp: '17°C', icon: 'weather-cloudy' },
-    { day: 'Thu', temp: '16°C', icon: 'weather-rainy' },
-];
-
 type ScreenState = 'loading' | 'no_key' | 'error' | 'success';
 
 export default function WeatherScreen() {
     const [weatherData, setWeatherData] = useState<any>(null);
     const [screenState, setScreenState] = useState<ScreenState>('loading');
     const [errorMsg, setErrorMsg] = useState<string>('');
+    const [searchCity, setSearchCity] = useState('');
+    const [loadingMore, setLoadingMore] = useState(false);
 
-    const fetchWeather = async () => {
-        const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
+    const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
 
-        // Guard: skip API call if key is missing or a placeholder
+    const fetchWeather = async (type: 'location' | 'search' = 'location', cityName?: string) => {
         if (!isKeyValid(API_KEY)) {
             setScreenState('no_key');
             return;
         }
 
-        setScreenState('loading');
+        if (type === 'search' && !cityName) return;
+
+        setLoadingMore(true);
+        if (screenState !== 'success') setScreenState('loading');
         setErrorMsg('');
 
         try {
-            const city = 'Shimla';
-            const response = await fetch(
-                `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`
-            );
-
-            if (!response.ok) {
-                throw new Error(`Server returned ${response.status}. Check your API key.`);
+            let url = '';
+            if (type === 'location') {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                
+                if (status !== 'granted') {
+                    // Fallback to Delhi if permission denied
+                    url = `https://api.openweathermap.org/data/2.5/weather?q=Delhi&appid=${API_KEY}&units=metric`;
+                } else {
+                    const location = await Location.getCurrentPositionAsync({});
+                    url = `https://api.openweathermap.org/data/2.5/weather?lat=${location.coords.latitude}&lon=${location.coords.longitude}&appid=${API_KEY}&units=metric`;
+                }
+            } else {
+                url = `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=${API_KEY}&units=metric`;
             }
 
+            const response = await fetch(url);
             const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to fetch weather data.');
+            }
 
             setWeatherData({
                 location: `${data.name}, ${data.sys.country}`,
@@ -70,98 +78,108 @@ export default function WeatherScreen() {
             setScreenState('success');
         } catch (err: any) {
             setErrorMsg(err?.message ?? 'Failed to fetch weather data.');
-            setScreenState('error');
+            if (screenState !== 'success') setScreenState('error');
+            else Alert.alert('Error', err?.message || 'Could not find city.');
+        } finally {
+            setLoadingMore(false);
         }
     };
 
     useEffect(() => {
-        fetchWeather();
+        fetchWeather('location');
     }, []);
 
-    // ── No API Key ─────────────────────────────────────────────────────────────
+    const handleSearch = () => {
+        if (searchCity.trim()) {
+            fetchWeather('search', searchCity.trim());
+        }
+    };
+
     if (screenState === 'no_key') {
         return (
             <View style={[styles.container, styles.center]}>
-                <MaterialCommunityIcons name="weather-cloudy-alert" size={70} color="#BDBDBD" />
+                <MaterialCommunityIcons name="weather-cloudy-alert" size={80} color="#BDBDBD" />
                 <Text style={styles.unavailableTitle}>Weather Data Unavailable</Text>
                 <Text style={styles.unavailableSubtitle}>
-                    No API key configured.{'\n'}Set EXPO_PUBLIC_WEATHER_API_KEY in your .env file.
+                    API key missing or invalid. Check your .env setup.
                 </Text>
             </View>
         );
     }
 
-    // ── Loading ─────────────────────────────────────────────────────────────────
-    if (screenState === 'loading') {
+    if (screenState === 'loading' && !loadingMore) {
         return (
             <View style={[styles.container, styles.center]}>
-                <ActivityIndicator size="large" color="#4CAF50" />
-                <Text style={styles.stateText}>Fetching weather data...</Text>
+                <ActivityIndicator size="large" color="#2E7D32" />
+                <Text style={styles.stateText}>Getting latest weather...</Text>
             </View>
         );
     }
 
-    // ── Error ───────────────────────────────────────────────────────────────────
-    if (screenState === 'error') {
+    if (screenState === 'error' && !weatherData) {
         return (
             <View style={[styles.container, styles.center]}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={60} color="#d32f2f" />
+                <MaterialCommunityIcons name="alert-circle-outline" size={70} color="#d32f2f" />
                 <Text style={styles.errorText}>{errorMsg}</Text>
-                <TouchableOpacity style={styles.refreshButton} onPress={fetchWeather}>
-                    <MaterialCommunityIcons name="refresh" size={20} color="#FFF" />
-                    <Text style={styles.refreshButtonText}>Try Again</Text>
+                <TouchableOpacity style={styles.primaryButton} onPress={() => fetchWeather('location')}>
+                    <Text style={styles.buttonText}>Try Current Location</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
-    // ── Success ─────────────────────────────────────────────────────────────────
     return (
         <View style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-                {/* Location Header */}
+            <View style={styles.searchSection}>
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search City (e.g. Pune)"
+                    placeholderTextColor="#999"
+                    value={searchCity}
+                    onChangeText={setSearchCity}
+                    onSubmitEditing={handleSearch}
+                />
+                <TouchableOpacity style={styles.searchIcon} onPress={handleSearch}>
+                    <MaterialCommunityIcons name="magnify" size={28} color="#2E7D32" />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                {loadingMore && <ActivityIndicator size="small" color="#2E7D32" style={{ marginBottom: 10 }} />}
+                
                 <View style={styles.header}>
-                    <MaterialCommunityIcons name="map-marker" size={24} color="#2E7D32" />
+                    <MaterialCommunityIcons name="map-marker" size={26} color="#2E7D32" />
                     <Text style={styles.locationText}>{weatherData?.location}</Text>
                 </View>
 
-                {/* Main Weather Card */}
                 <View style={styles.mainCard}>
-                    <MaterialCommunityIcons name={weatherData?.iconName as any} size={80} color="#FFF" />
+                    <MaterialCommunityIcons name={weatherData?.iconName as any} size={100} color="#FFF" />
                     <Text style={styles.temperature}>{weatherData?.temperature}</Text>
                     <Text style={styles.condition}>{weatherData?.condition}</Text>
                 </View>
 
-                {/* Details Grid */}
-                <View style={styles.detailsContainer}>
-                    <View style={styles.detailItem}>
-                        <MaterialCommunityIcons name="water-percent" size={30} color="#2E7D32" />
+                <View style={styles.detailsRow}>
+                    <View style={styles.detailCard}>
+                        <MaterialCommunityIcons name="water-percent" size={34} color="#2E7D32" />
                         <Text style={styles.detailLabel}>Humidity</Text>
                         <Text style={styles.detailValue}>{weatherData?.humidity}</Text>
                     </View>
-                    <View style={styles.detailItem}>
-                        <MaterialCommunityIcons name="weather-windy" size={30} color="#2E7D32" />
+                    <View style={styles.detailCard}>
+                        <MaterialCommunityIcons name="weather-windy" size={34} color="#2E7D32" />
                         <Text style={styles.detailLabel}>Wind Speed</Text>
                         <Text style={styles.detailValue}>{weatherData?.windSpeed}</Text>
                     </View>
                 </View>
 
-                {/* 3-Day Forecast */}
-                <View style={styles.forecastContainer}>
-                    <Text style={styles.sectionTitle}>3-Day Forecast</Text>
-                    {DUMMY_FORECAST.map((item, index) => (
-                        <View key={index} style={styles.forecastItem}>
-                            <Text style={styles.forecastDay}>{item.day}</Text>
-                            <MaterialCommunityIcons name={item.icon as any} size={24} color="#555" />
-                            <Text style={styles.forecastTemp}>{item.temp}</Text>
-                        </View>
-                    ))}
-                </View>
-
-                {/* Refresh Button */}
-                <TouchableOpacity style={styles.refreshButton} onPress={fetchWeather}>
-                    <MaterialCommunityIcons name="refresh" size={24} color="#FFF" />
-                    <Text style={styles.refreshButtonText}>Refresh</Text>
+                <TouchableOpacity 
+                    style={styles.gpsButton} 
+                    onPress={() => {
+                        setSearchCity('');
+                        fetchWeather('location');
+                    }}
+                >
+                    <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#FFF" />
+                    <Text style={styles.gpsButtonText}>Use Current Location</Text>
                 </TouchableOpacity>
             </ScrollView>
         </View>
@@ -171,150 +189,144 @@ export default function WeatherScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#E8F5E9',
+        backgroundColor: '#F1F8E9',
     },
     center: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: 30,
     },
-    stateText: {
-        marginTop: 15,
-        fontSize: 16,
-        color: '#666',
+    searchSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF',
+        margin: 15,
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
-    errorText: {
-        marginTop: 15,
-        marginBottom: 25,
-        fontSize: 16,
-        color: '#d32f2f',
-        textAlign: 'center',
+    searchInput: {
+        flex: 1,
+        height: 55,
+        fontSize: 18,
+        color: '#333',
+    },
+    searchIcon: {
+        padding: 8,
+    },
+    scrollContent: {
         paddingHorizontal: 20,
-    },
-    unavailableTitle: {
-        marginTop: 20,
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#757575',
-        textAlign: 'center',
-    },
-    unavailableSubtitle: {
-        marginTop: 10,
-        fontSize: 14,
-        color: '#9E9E9E',
-        textAlign: 'center',
-        lineHeight: 22,
-        paddingHorizontal: 30,
-    },
-    scrollContainer: {
-        padding: 20,
+        paddingBottom: 40,
         alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 30,
-        marginTop: 10,
+        marginVertical: 15,
     },
     locationText: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#333',
-        marginLeft: 10,
+        marginLeft: 8,
     },
     mainCard: {
         backgroundColor: '#4CAF50',
-        borderRadius: 20,
-        padding: 30,
-        alignItems: 'center',
         width: '100%',
-        marginBottom: 30,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        borderRadius: 25,
+        padding: 35,
+        alignItems: 'center',
+        marginBottom: 25,
+        elevation: 6,
     },
     temperature: {
-        fontSize: 48,
+        fontSize: 64,
         fontWeight: 'bold',
         color: '#FFF',
         marginTop: 10,
     },
     condition: {
-        fontSize: 24,
+        fontSize: 28,
         color: '#E8F5E9',
-        marginTop: 5,
+        textTransform: 'capitalize',
     },
-    detailsContainer: {
+    detailsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        justifyContent: 'space-between',
         width: '100%',
-        marginBottom: 30,
+        marginBottom: 25,
     },
-    detailItem: {
-        alignItems: 'center',
+    detailCard: {
         backgroundColor: '#FFF',
-        padding: 15,
-        borderRadius: 15,
-        width: '45%',
-        elevation: 2,
+        width: '47%',
+        padding: 20,
+        borderRadius: 20,
+        alignItems: 'center',
+        elevation: 3,
     },
     detailLabel: {
         fontSize: 16,
         color: '#666',
-        marginTop: 5,
+        marginTop: 8,
     },
     detailValue: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
-        marginTop: 5,
+        color: '#2E7D32',
+        marginTop: 4,
     },
-    forecastContainer: {
-        width: '100%',
-        backgroundColor: '#FFF',
-        padding: 20,
-        borderRadius: 15,
-        marginBottom: 30,
-        elevation: 2,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 15,
-        color: '#333',
-    },
-    forecastItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#EEE',
-    },
-    forecastDay: {
-        fontSize: 16,
-        color: '#333',
-        width: 50,
-    },
-    forecastTemp: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    refreshButton: {
+    gpsButton: {
         flexDirection: 'row',
         backgroundColor: '#2E7D32',
-        paddingVertical: 12,
-        paddingHorizontal: 30,
-        borderRadius: 25,
+        paddingVertical: 16,
+        paddingHorizontal: 25,
+        borderRadius: 30,
         alignItems: 'center',
+        marginTop: 10,
     },
-    refreshButtonText: {
+    gpsButtonText: {
         color: '#FFF',
         fontSize: 18,
         fontWeight: 'bold',
         marginLeft: 10,
+    },
+    primaryButton: {
+        backgroundColor: '#2E7D32',
+        paddingVertical: 12,
+        paddingHorizontal: 25,
+        borderRadius: 10,
+    },
+    buttonText: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    stateText: {
+        marginTop: 20,
+        fontSize: 18,
+        color: '#555',
+    },
+    errorText: {
+        fontSize: 18,
+        color: '#d32f2f',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    unavailableTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#757575',
+        marginTop: 20,
+    },
+    unavailableSubtitle: {
+        fontSize: 16,
+        color: '#999',
+        textAlign: 'center',
+        marginTop: 10,
     },
 });
