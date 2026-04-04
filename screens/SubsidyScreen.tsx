@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Subsidy } from '../types';
 import React, { useState, useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View, LayoutAnimation, UIManager, Platform, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
@@ -11,7 +12,7 @@ if (Platform.OS === 'android') {
 }
 
 // Structured JSON Data mimicking an API response
-const SUBSIDIES_DATA = [
+const SUBSIDIES_DATA: Subsidy[] = [
     {
         id: '1',
         title: 'PM Kisan Samman Nidhi',
@@ -43,8 +44,9 @@ const SUBSIDIES_DATA = [
 ];
 
 export default function SubsidyScreen() {
-    const [subsidies, setSubsidies] = useState<any[]>([]);
+    const [subsidies, setSubsidies] = useState<Subsidy[]>([]);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Prepared for backend API logic later
     useEffect(() => {
@@ -66,6 +68,14 @@ export default function SubsidyScreen() {
         setExpandedId(expandedId === id ? null : id);
     };
 
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        // Simulate network delay — ready for future API integration
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setSubsidies(SUBSIDIES_DATA);
+        setRefreshing(false);
+    };
+
     const handleApply = async (url?: string) => {
         if (!url) {
             Alert.alert("Link Unavailable", "The application portal is not available at the moment.");
@@ -74,7 +84,7 @@ export default function SubsidyScreen() {
         await WebBrowser.openBrowserAsync(url);
     };
 
-    const renderItem = ({ item }: { item: typeof SUBSIDIES_DATA[0] }) => {
+    const renderItem = ({ item }: { item: Subsidy }) => {
         const isExpanded = expandedId === item.id;
 
         return (
@@ -116,6 +126,10 @@ export default function SubsidyScreen() {
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
+                initialNumToRender={5}
+                maxToRenderPerBatch={5}
+                onRefresh={handleRefresh}
+                refreshing={refreshing}
             />
         </View>
     );

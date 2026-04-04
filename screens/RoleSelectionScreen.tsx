@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const ROLE_STORAGE_KEY = '@kisan_seva_user_role';
@@ -31,14 +32,14 @@ export default function RoleSelectionScreen({ onSelectRole, loading = false }: P
 
     if (loading) {
         return (
-            <View style={styles.container}>
+            <SafeAreaView style={styles.container}>
                 <ActivityIndicator size="large" color="#4CAF50" />
-            </View>
+            </SafeAreaView>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <View style={styles.content}>
                 <Text style={styles.title}>Kisan Seva</Text>
                 <Text style={styles.subtitle}>Select your role to continue</Text>
@@ -59,7 +60,7 @@ export default function RoleSelectionScreen({ onSelectRole, loading = false }: P
                     <Text style={styles.buttonText}>Buyer 🛒</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </SafeAreaView>
     );
 }
 

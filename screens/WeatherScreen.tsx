@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { WeatherData } from '../types';
 import * as Location from 'expo-location';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 
 const PLACEHOLDER_KEYS = ['your_openweathermap_api_key_here', 'undefined', ''];
 
@@ -24,11 +25,13 @@ function getWeatherIcon(conditionCode: number): string {
 type ScreenState = 'loading' | 'no_key' | 'error' | 'success';
 
 export default function WeatherScreen() {
-    const [weatherData, setWeatherData] = useState<any>(null);
+    const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
     const [screenState, setScreenState] = useState<ScreenState>('loading');
     const [errorMsg, setErrorMsg] = useState<string>('');
     const [searchCity, setSearchCity] = useState('');
     const [loadingMore, setLoadingMore] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const API_KEY = process.env.EXPO_PUBLIC_WEATHER_API_KEY;
 
@@ -43,6 +46,11 @@ export default function WeatherScreen() {
         setLoadingMore(true);
         if (screenState !== 'success') setScreenState('loading');
         setErrorMsg('');
+
+        // Abort any in-flight request before starting a new one
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
         try {
             let url = '';
@@ -60,7 +68,7 @@ export default function WeatherScreen() {
                 url = `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=${API_KEY}&units=metric`;
             }
 
-            const response = await fetch(url);
+            const response = await fetch(url, { signal: controller.signal });
             const data = await response.json();
 
             if (!response.ok) {
@@ -77,6 +85,7 @@ export default function WeatherScreen() {
             });
             setScreenState('success');
         } catch (err: any) {
+            if (err?.name === 'AbortError') return; // Ignore aborted requests
             setErrorMsg(err?.message ?? 'Failed to fetch weather data.');
             if (screenState !== 'success') setScreenState('error');
             else Alert.alert('Error', err?.message || 'Could not find city.');
@@ -87,12 +96,19 @@ export default function WeatherScreen() {
 
     useEffect(() => {
         fetchWeather('location');
+        return () => { abortControllerRef.current?.abort(); };
     }, []);
 
     const handleSearch = () => {
         if (searchCity.trim()) {
             fetchWeather('search', searchCity.trim());
         }
+    };
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchWeather(searchCity.trim() ? 'search' : 'location', searchCity.trim() || undefined);
+        setRefreshing(false);
     };
 
     if (screenState === 'no_key') {
@@ -144,7 +160,12 @@ export default function WeatherScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#2E7D32']} tintColor="#2E7D32" />
+                }
+            >
                 {loadingMore && <ActivityIndicator size="small" color="#2E7D32" style={{ marginBottom: 10 }} />}
                 
                 <View style={styles.header}>

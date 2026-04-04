@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ROLE_STORAGE_KEY } from '../../screens/RoleSelectionScreen';
 
@@ -27,7 +28,7 @@ export default function BuyerDashboard() {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>🛒 Buyer Dashboard</Text>
@@ -41,7 +42,7 @@ export default function BuyerDashboard() {
                         <View style={styles.iconBox}>
                             <MaterialCommunityIcons name={item.icon as any} size={36} color="#FF9800" />
                         </View>
-                        <View key={item.id} style={styles.cardContent}>
+                        <View style={styles.cardContent}>
                             <Text style={styles.productName}>{item.name}</Text>
                             <Text style={styles.productPrice}>{item.price}</Text>
                             <Text style={styles.productSeller}>Seller: {item.seller}</Text>
@@ -62,7 +63,7 @@ export default function BuyerDashboard() {
                     <Text style={styles.signOutText}>Sign Out</Text>
                 </TouchableOpacity>
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FFF8F1',
-        paddingTop: 55,
+        paddingTop: 10,
         paddingHorizontal: 20,
     },
     header: {

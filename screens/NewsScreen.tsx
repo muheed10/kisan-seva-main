@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import { NewsArticle } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -23,9 +24,11 @@ function isKeyValid(key: string | undefined): boolean {
 type ScreenState = 'loading' | 'no_key' | 'error' | 'success';
 
 export default function NewsScreen() {
-    const [news, setNews] = useState<any[]>([]);
+    const [news, setNews] = useState<NewsArticle[]>([]);
     const [screenState, setScreenState] = useState<ScreenState>('loading');
     const [errorMsg, setErrorMsg] = useState<string>('');
+    const [refreshing, setRefreshing] = useState(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const fetchNews = async () => {
         const API_KEY = process.env.EXPO_PUBLIC_NEWS_API_KEY;
@@ -39,9 +42,15 @@ export default function NewsScreen() {
         setScreenState('loading');
         setErrorMsg('');
 
+        // Abort any in-flight request
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         try {
             const response = await fetch(
-                `https://gnews.io/api/v4/search?q=agriculture%20OR%20farming&lang=en&max=10&apikey=${API_KEY}`
+                `https://gnews.io/api/v4/search?q=agriculture%20OR%20farming&lang=en&max=10&apikey=${API_KEY}`,
+                { signal: controller.signal }
             );
 
             if (!response.ok) {
@@ -57,6 +66,7 @@ export default function NewsScreen() {
             setNews(data.articles);
             setScreenState('success');
         } catch (err: any) {
+            if (err?.name === 'AbortError') return; // Ignore aborted requests
             setErrorMsg(err?.message ?? 'Failed to fetch news.');
             setScreenState('error');
         }
@@ -64,7 +74,14 @@ export default function NewsScreen() {
 
     useEffect(() => {
         fetchNews();
+        return () => { abortControllerRef.current?.abort(); };
     }, []);
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchNews();
+        setRefreshing(false);
+    };
 
     const openArticle = async (url: string) => {
         try {
@@ -74,7 +91,7 @@ export default function NewsScreen() {
         }
     };
 
-    const renderItem = ({ item }: { item: any }) => (
+    const renderItem = ({ item }: { item: NewsArticle }) => (
         <View style={styles.card}>
             {item.image && (
                 <Image source={{ uri: item.image }} style={styles.cardImage} />
@@ -152,6 +169,11 @@ export default function NewsScreen() {
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
                 initialNumToRender={5}
+                maxToRenderPerBatch={5}
+                windowSize={5}
+                removeClippedSubviews={true}
+                onRefresh={handleRefresh}
+                refreshing={refreshing}
                 ListEmptyComponent={
                     <Text style={styles.stateText}>No news articles found.</Text>
                 }

@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Dummy Product Type
 interface Product {
@@ -8,20 +9,56 @@ interface Product {
     name: string;
     price: string;
     quantity: string;
-    image: any;
+    image: string;
 }
 
+const MARKET_STORAGE_KEY = '@kisan_seva_marketplace';
+
+const DEFAULT_PRODUCTS: Product[] = [
+    { id: '1', name: 'Fresh Wheat', price: '₹2200/quintal', quantity: '50 Quintals', image: 'https://placehold.co/100x100/png' },
+    { id: '2', name: 'Organic Tomatoes', price: '₹40/kg', quantity: '200 kg', image: 'https://placehold.co/100x100/png' },
+    { id: '3', name: 'Basmati Rice', price: '₹6000/quintal', quantity: '20 Quintals', image: 'https://placehold.co/100x100/png' },
+];
+
 export default function MarketScreen() {
-    const [products, setProducts] = useState<Product[]>([
-        { id: '1', name: 'Fresh Wheat', price: '₹2200/quintal', quantity: '50 Quintals', image: 'https://placehold.co/100x100/png' },
-        { id: '2', name: 'Organic Tomatoes', price: '₹40/kg', quantity: '200 kg', image: 'https://placehold.co/100x100/png' },
-        { id: '3', name: 'Basmati Rice', price: '₹6000/quintal', quantity: '20 Quintals', image: 'https://placehold.co/100x100/png' },
-    ]);
+    const [products, setProducts] = useState<Product[]>([]);
 
     const [modalVisible, setModalVisible] = useState(false);
     const [newProductName, setNewProductName] = useState('');
     const [newProductPrice, setNewProductPrice] = useState('');
     const [newProductQty, setNewProductQty] = useState('');
+    const [refreshing, setRefreshing] = useState(false);
+
+    useEffect(() => {
+        loadProducts();
+    }, []);
+
+    const loadProducts = async () => {
+        try {
+            const stored = await AsyncStorage.getItem(MARKET_STORAGE_KEY);
+            if (stored) {
+                setProducts(JSON.parse(stored));
+            } else {
+                setProducts(DEFAULT_PRODUCTS);
+            }
+        } catch {
+            setProducts(DEFAULT_PRODUCTS);
+        }
+    };
+
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await loadProducts();
+        setRefreshing(false);
+    };
+
+    const saveProducts = async (updated: Product[]) => {
+        try {
+            await AsyncStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(updated));
+        } catch (err) {
+            console.error('Error saving products:', err);
+        }
+    };
 
     const handleAddProduct = () => {
         if (!newProductName || !newProductPrice || !newProductQty) {
@@ -37,7 +74,9 @@ export default function MarketScreen() {
             image: 'https://placehold.co/100x100/png',
         };
 
-        setProducts(prev => [newProduct, ...prev]);
+        const updated = [newProduct, ...products];
+        setProducts(updated);
+        saveProducts(updated);
         setModalVisible(false);
         setNewProductName('');
         setNewProductPrice('');
@@ -69,6 +108,11 @@ export default function MarketScreen() {
                 keyExtractor={item => item.id}
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
+                initialNumToRender={5}
+                maxToRenderPerBatch={5}
+                windowSize={5}
+                onRefresh={handleRefresh}
+                refreshing={refreshing}
             />
 
             {/* Floating Action Button */}

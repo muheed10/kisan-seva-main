@@ -66,6 +66,13 @@ export default function DiseaseScreen() {
             <Text style={styles.title}>Crop Disease ID</Text>
             <Text style={styles.subtitle}>Upload a photo of the affected plant leaf to identify the disease.</Text>
 
+            <View style={styles.demoBanner}>
+                <MaterialCommunityIcons name="flask-outline" size={20} color="#FF9800" />
+                <Text style={styles.demoText}>
+                    Demo Mode — Results are simulated. Real AI analysis coming soon!
+                </Text>
+            </View>
+
             <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.actionButton} onPress={takePhoto}>
                     <MaterialCommunityIcons name="camera" size={24} color="#FFF" />
@@ -105,6 +112,10 @@ export default function DiseaseScreen() {
 
             {result && (
                 <View style={styles.resultContainer}>
+                    <View style={styles.demoResultBadge}>
+                        <MaterialCommunityIcons name="test-tube" size={16} color="#FF9800" />
+                        <Text style={styles.demoResultText}>Demo Result</Text>
+                    </View>
                     <Text style={styles.resultTitle}>Analysis Result:</Text>
                     <View style={styles.resultItem}>
                         <MaterialCommunityIcons name="alert-circle" size={24} color="#d32f2f" />
@@ -245,5 +256,40 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#444',
         lineHeight: 24,
+    },
+    demoBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF3E0',
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderRadius: 10,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#FFE0B2',
+        width: '100%',
+    },
+    demoText: {
+        fontSize: 13,
+        color: '#E65100',
+        marginLeft: 8,
+        flex: 1,
+        fontWeight: '600',
+    },
+    demoResultBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF3E0',
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 12,
+        alignSelf: 'flex-start',
+        marginBottom: 10,
+    },
+    demoResultText: {
+        fontSize: 12,
+        color: '#E65100',
+        fontWeight: 'bold',
+        marginLeft: 4,
     },
 });

@@ -1,7 +1,8 @@
 import { SignedIn, SignedOut, useAuth, useUser } from '@clerk/clerk-expo'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Link, Redirect, useRouter } from 'expo-router'
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { ROLE_STORAGE_KEY } from '../../screens/RoleSelectionScreen'
 
 export default function Page() {
@@ -11,14 +12,14 @@ export default function Page() {
 
     const handleSignOut = async () => {
         try {
-            // 1. Clear the role selection - this is primary
-            await AsyncStorage.removeItem(ROLE_STORAGE_KEY)
-            
-            // 2. Navigate away from the home route IMMEDIATELY
-            router.replace('/')
-
-            // 3. Trigger sign out in the background
+            // 1. Sign out from Clerk FIRST to clear auth state
             await signOut()
+
+            // 2. Clear the persisted role
+            await AsyncStorage.removeItem(ROLE_STORAGE_KEY)
+
+            // 3. Navigate to root (Role Selection)
+            router.replace('/')
         } catch (err) {
             console.error('Error signing out:', err)
         }
@@ -34,7 +35,7 @@ export default function Page() {
     ]
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <SignedIn>
                 <View style={styles.header}>
                     <Text style={styles.welcomeText}>Welcome, {user?.firstName || user?.emailAddresses?.[0]?.emailAddress || 'User'}!</Text>
@@ -56,7 +57,11 @@ export default function Page() {
                     <Text style={styles.signOutText}>Sign Out</Text>
                 </TouchableOpacity>
             </SignedIn>
-        </View>
+
+            <SignedOut>
+                <Redirect href="/(auth)/sign-in" />
+            </SignedOut>
+        </SafeAreaView>
     )
 }
 
@@ -67,7 +72,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     header: {
-        marginTop: 40,
+        marginTop: 10,
         marginBottom: 30,
         alignItems: 'center',
     },

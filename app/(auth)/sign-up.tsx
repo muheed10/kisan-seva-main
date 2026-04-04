@@ -1,7 +1,7 @@
 import { useSignUp } from '@clerk/clerk-expo'
 import { Link, useRouter } from 'expo-router'
 import * as React from 'react'
-import { Button, Text, TextInput, View } from 'react-native'
+import { Alert, Button, Text, TextInput, View } from 'react-native'
 
 export default function SignUpScreen() {
     const { isLoaded, signUp, setActive } = useSignUp()
@@ -28,6 +28,7 @@ export default function SignUpScreen() {
             setPendingVerification(true)
         } catch (err: any) {
             console.error(JSON.stringify(err, null, 2))
+            Alert.alert('Sign Up Error', err.errors?.[0]?.message || 'An error occurred during sign up.')
         }
     }
 
@@ -49,6 +50,7 @@ export default function SignUpScreen() {
             }
         } catch (err: any) {
             console.error(JSON.stringify(err, null, 2))
+            Alert.alert('Verification Error', err.errors?.[0]?.message || 'Invalid verification code.')
         }
     }
 
