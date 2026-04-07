@@ -12,13 +12,11 @@ export default function Page() {
 
     const handleSignOut = async () => {
         try {
-            // 1. Sign out from Clerk FIRST to clear auth state
+            // Sign out from Clerk to clear auth state
+            // Role is preserved so user returns to sign-in, not role selection
             await signOut()
 
-            // 2. Clear the persisted role
-            await AsyncStorage.removeItem(ROLE_STORAGE_KEY)
-
-            // 3. Navigate to root (Role Selection)
+            // Navigate to root — role is still 'farmer' so it redirects to sign-in
             router.replace('/')
         } catch (err) {
             console.error('Error signing out:', err)

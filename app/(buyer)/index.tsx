@@ -17,10 +17,8 @@ export default function BuyerDashboard() {
 
     const handleSignOut = async () => {
         try {
-            // 1. Clear the role first
+            // Clear the role and navigate to root (Role Selection)
             await AsyncStorage.removeItem(ROLE_STORAGE_KEY);
-            
-            // 2. Navigate to root (Role Selection) IMMEDIATELY
             router.replace('/');
         } catch (err) {
             console.error('Error signing out:', err);

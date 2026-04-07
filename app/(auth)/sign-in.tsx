@@ -1,7 +1,9 @@
 import { useSignIn } from '@clerk/clerk-expo'
 import { Link, useRouter } from 'expo-router'
 import React, { useState } from 'react'
-import { Button, Text, TextInput, View, Alert } from 'react-native'
+import { Button, Text, TextInput, View, Alert, TouchableOpacity } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { ROLE_STORAGE_KEY } from '../../screens/RoleSelectionScreen'
 
 export default function Page() {
     const { signIn, setActive, isLoaded } = useSignIn()
@@ -103,6 +105,19 @@ export default function Page() {
                 <Link href="/sign-up">
                     <Text style={{ color: '#2E7D32', fontWeight: 'bold' }}>Sign Up</Text>
                 </Link>
+            </View>
+            <View style={{ marginTop: 40, alignItems: 'center' }}>
+                <TouchableOpacity 
+                    onPress={async () => {
+                        await AsyncStorage.removeItem(ROLE_STORAGE_KEY)
+                        router.replace('/')
+                    }}
+                    style={{ padding: 10 }}
+                >
+                    <Text style={{ color: '#666', fontSize: 16, textDecorationLine: 'underline' }}>
+                        Switch Role (Farmer / Buyer)
+                    </Text>
+                </TouchableOpacity>
             </View>
         </View>
     )
