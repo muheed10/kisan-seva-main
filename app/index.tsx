@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Redirect, useFocusEffect } from 'expo-router';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { ROLE_STORAGE_KEY, UserRole } from '../screens/RoleSelectionScreen';
@@ -11,6 +11,7 @@ type CheckState = 'checking' | 'no_role' | 'farmer' | 'buyer';
 export default function Index() {
     const [state, setState] = useState<CheckState>('checking');
     const { isSignedIn, isLoaded } = useAuth();
+    const router = useRouter();
 
     const checkRole = async () => {
         try {
@@ -38,6 +39,20 @@ export default function Index() {
         }, [])
     );
 
+    useEffect(() => {
+        if (state === 'checking' || !isLoaded) return;
+
+        if (state === 'farmer') {
+            if (isSignedIn) {
+                router.replace('/(home)');
+            } else {
+                router.replace('/(auth)/sign-in');
+            }
+        } else if (state === 'buyer') {
+            router.replace('/(buyer)');
+        }
+    }, [state, isSignedIn, isLoaded]);
+
     // Wait for both role check and Clerk load
     if (state === 'checking' || !isLoaded) {
         return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
@@ -52,20 +67,6 @@ export default function Index() {
                 }}
             />
         );
-    }
-
-    // Farmer Logic: Must be signed in to see dashboard
-    if (state === 'farmer') {
-        if (isSignedIn) {
-            return <Redirect href="/(home)" />;
-        } else {
-            return <Redirect href="/(auth)/sign-in" />;
-        }
-    }
-
-    // Buyer Logic: Dashboard is currently open to all
-    if (state === 'buyer') {
-        return <Redirect href={'/(buyer)' as any} />;
     }
 
     return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;

@@ -5,6 +5,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ROLE_STORAGE_KEY } from '../../screens/RoleSelectionScreen';
+import { useAuth } from '@clerk/clerk-expo';
 
 const FEATURED_PRODUCTS = [
     { id: '1', name: 'Fresh Wheat', price: '₹2200/quintal', seller: 'Ramesh Kumar', icon: 'grain' },
@@ -14,17 +15,17 @@ const FEATURED_PRODUCTS = [
 
 export default function BuyerDashboard() {
     const router = useRouter();
-
+    const { signOut } = useAuth();
+    
     const handleSignOut = async () => {
         try {
-            // Clear the role and navigate to root (Role Selection)
+            await signOut();
             await AsyncStorage.removeItem(ROLE_STORAGE_KEY);
-            router.replace('/');
+            router.replace('/(auth)/sign-in');
         } catch (err) {
             console.error('Error signing out:', err);
         }
     };
-
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
@@ -57,7 +58,6 @@ export default function BuyerDashboard() {
                 <Text style={styles.note}>More features coming soon for buyers!</Text>
 
                 <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
-                    <MaterialCommunityIcons name="logout" size={20} color="#FFF" />
                     <Text style={styles.signOutText}>Sign Out</Text>
                 </TouchableOpacity>
             </ScrollView>
@@ -77,11 +77,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 28,
+        paddingHorizontal: 10,
     },
     headerTitle: {
         fontSize: 24,
         fontWeight: 'bold',
         color: '#E65100',
+        textAlign: 'center',
     },
     sectionTitle: {
         fontSize: 18,
@@ -146,18 +148,16 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     signOutButton: {
-        flexDirection: 'row',
         backgroundColor: '#d32f2f',
-        paddingVertical: 14,
-        borderRadius: 12,
+        padding: 15,
+        borderRadius: 10,
         alignItems: 'center',
-        justifyContent: 'center',
+        marginTop: 20,
         marginBottom: 40,
     },
     signOutText: {
         color: '#FFF',
         fontWeight: 'bold',
         fontSize: 16,
-        marginLeft: 10,
     },
 });
