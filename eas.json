@@ -12,6 +12,11 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZXhwZXJ0LW9zdHJpY2gtNDcuY2xlcmsuYWNjb3VudHMuZGV2JA",
+        "EXPO_PUBLIC_WEATHER_API_KEY": "e32c4860670332f0e905ff706b439cbf",
+        "EXPO_PUBLIC_NEWS_API_KEY": "75bf37dc44be48b3ae5e7ac2f18ea91e"
       }
     },
     "production": {
