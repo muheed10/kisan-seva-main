@@ -1,4 +1,4 @@
-import { SignedIn, SignedOut, useAuth, useUser } from '@clerk/clerk-expo'
+import { SignedIn, SignedOut, useUser } from '@clerk/clerk-expo'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Link, Redirect, useRouter } from 'expo-router'
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
@@ -7,21 +7,7 @@ import { ROLE_STORAGE_KEY } from '../../screens/RoleSelectionScreen'
 
 export default function Page() {
     const { user } = useUser()
-    const { signOut } = useAuth()
     const router = useRouter()
-
-    const handleSignOut = async () => {
-        try {
-            // Sign out from Clerk to clear auth state
-            // Role is preserved so user returns to sign-in, not role selection
-            await signOut()
-
-            // Navigate to root — role is still 'farmer' so it redirects to sign-in
-            router.replace('/')
-        } catch (err) {
-            console.error('Error signing out:', err)
-        }
-    }
 
     const features = [
         { name: 'Market Place', route: '/(home)/marketplace', icon: '🛒' },
@@ -50,10 +36,6 @@ export default function Page() {
                         </Link>
                     ))}
                 </ScrollView>
-
-                <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
-                    <Text style={styles.signOutText}>Sign Out</Text>
-                </TouchableOpacity>
             </SignedIn>
 
             <SignedOut>
@@ -114,17 +96,5 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         textAlign: 'center',
-    },
-    signOutButton: {
-        backgroundColor: '#d32f2f', // Red
-        padding: 15,
-        borderRadius: 10,
-        alignItems: 'center',
-        marginTop: 20,
-    },
-    signOutText: {
-        color: '#FFF',
-        fontWeight: 'bold',
-        fontSize: 16,
     },
 })

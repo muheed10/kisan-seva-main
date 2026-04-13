@@ -32,6 +32,9 @@ export interface Product {
   price: string;
   quantity: string;
   image: string;
+  contactNumber: string;
+  farmerId: string;
+  location: string;
 }
 
 /** A featured product shown on the buyer dashboard */

@@ -4,6 +4,7 @@ import { tokenCache } from '../utils/tokenCache'
 import * as SplashScreen from 'expo-splash-screen'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Text, View } from 'react-native'
+import { ProductProvider } from '../context/ProductContext'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -50,7 +51,9 @@ export default function RootLayout() {
   return (
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <ClerkLoaded>
-        <LayoutContent onLoaded={handleClerkLoaded} />
+        <ProductProvider>
+          <LayoutContent onLoaded={handleClerkLoaded} />
+        </ProductProvider>
       </ClerkLoaded>
     </ClerkProvider>
   )

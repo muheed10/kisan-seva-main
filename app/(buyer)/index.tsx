@@ -1,21 +1,29 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ROLE_STORAGE_KEY } from '../../screens/RoleSelectionScreen';
 import { useAuth } from '@clerk/clerk-expo';
-
-const FEATURED_PRODUCTS = [
-    { id: '1', name: 'Fresh Wheat', price: '₹2200/quintal', seller: 'Ramesh Kumar', icon: 'grain' },
-    { id: '2', name: 'Organic Tomatoes', price: '₹40/kg', seller: 'Priya Farms', icon: 'food-apple' },
-    { id: '3', name: 'Basmati Rice', price: '₹6000/quintal', seller: 'Singh Agro', icon: 'rice' },
-];
+import { useProductContext } from '../../context/ProductContext';
 
 export default function BuyerDashboard() {
     const router = useRouter();
     const { signOut } = useAuth();
+    const { products } = useProductContext();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortOrder, setSortOrder] = useState<'lowToHigh' | 'highToLow' | null>(null);
+    
+    // Derived list
+    const filteredProducts = products
+        .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        .sort((a, b) => {
+            if (!sortOrder) return 0;
+            const priceA = parseInt(a.price.replace(/[^\d]/g, '')) || 0;
+            const priceB = parseInt(b.price.replace(/[^\d]/g, '')) || 0;
+            return sortOrder === 'lowToHigh' ? priceA - priceB : priceB - priceA;
+        });
     
     const handleSignOut = async () => {
         try {
@@ -34,28 +42,59 @@ export default function BuyerDashboard() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.sectionTitle}>Available Products</Text>
+                <View style={styles.searchContainer}>
+                    <MaterialCommunityIcons name="magnify" size={24} color="#888" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search crops..."
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                </View>
 
-                {FEATURED_PRODUCTS.map((item) => (
-                    <View key={item.id} style={styles.card}>
-                        <View style={styles.iconBox}>
-                            <MaterialCommunityIcons name={item.icon as any} size={36} color="#FF9800" />
-                        </View>
-                        <View style={styles.cardContent}>
-                            <Text style={styles.productName}>{item.name}</Text>
-                            <Text style={styles.productPrice}>{item.price}</Text>
-                            <Text style={styles.productSeller}>Seller: {item.seller}</Text>
-                        </View>
-                        <TouchableOpacity
-                            style={styles.contactBtn}
-                            onPress={() => Alert.alert('Contact', `Contacting seller for ${item.name}`)}
-                        >
-                            <MaterialCommunityIcons name="phone" size={20} color="#FFF" />
-                        </TouchableOpacity>
-                    </View>
-                ))}
+                <View style={styles.filterContainer}>
+                    <TouchableOpacity 
+                        style={[styles.filterBtn, sortOrder === 'lowToHigh' && styles.filterBtnActive]}
+                        onPress={() => setSortOrder(sortOrder === 'lowToHigh' ? null : 'lowToHigh')}
+                    >
+                        <Text style={[styles.filterText, sortOrder === 'lowToHigh' && styles.filterTextActive]}>Price: Low to High</Text>
+                    </TouchableOpacity>
 
-                <Text style={styles.note}>More features coming soon for buyers!</Text>
+                    <TouchableOpacity 
+                        style={[styles.filterBtn, sortOrder === 'highToLow' && styles.filterBtnActive]}
+                        onPress={() => setSortOrder(sortOrder === 'highToLow' ? null : 'highToLow')}
+                    >
+                        <Text style={[styles.filterText, sortOrder === 'highToLow' && styles.filterTextActive]}>Price: High to Low</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <Text style={styles.sectionTitle}>Available Crops</Text>
+
+                {filteredProducts.length === 0 ? (
+                    <Text style={styles.note}>No crops found.</Text>
+                ) : (
+                    filteredProducts.map((item) => (
+                        <View key={item.id} style={styles.card}>
+                            <View style={styles.iconBox}>
+                                <MaterialCommunityIcons name="sprout" size={36} color="#FF9800" />
+                            </View>
+                            <View style={styles.cardContent}>
+                                <Text style={styles.productName}>{item.name}</Text>
+                                <Text style={styles.productLocation}>
+                                    <MaterialCommunityIcons name="map-marker" size={14} color="#888" /> {item.location || 'Location N/A'}
+                                </Text>
+                                <Text style={styles.productPrice}>{item.price}</Text>
+                                <Text style={styles.productSeller}>Qty: {item.quantity}</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.contactBtn}
+                                onPress={() => Alert.alert('Contact Seller', `Phone: ${item.contactNumber || 'N/A'}`)}
+                            >
+                                <MaterialCommunityIcons name="phone" size={20} color="#FFF" />
+                            </TouchableOpacity>
+                        </View>
+                    ))
+                )}
 
                 <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
                     <Text style={styles.signOutText}>Sign Out</Text>
@@ -84,6 +123,54 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#E65100',
         textAlign: 'center',
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF',
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        marginBottom: 15,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+    searchIcon: {
+        marginRight: 10,
+    },
+    searchInput: {
+        flex: 1,
+        paddingVertical: 12,
+        fontSize: 16,
+    },
+    filterContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+    },
+    filterBtn: {
+        flex: 1,
+        backgroundColor: '#FFF',
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginHorizontal: 4,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    filterBtnActive: {
+        backgroundColor: '#FF9800',
+        borderColor: '#FF9800',
+    },
+    filterText: {
+        fontSize: 13,
+        color: '#666',
+        fontWeight: '600',
+    },
+    filterTextActive: {
+        color: '#FFF',
     },
     sectionTitle: {
         fontSize: 18,
@@ -120,6 +207,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#333',
+    },
+    productLocation: {
+        fontSize: 12,
+        color: '#888',
+        marginTop: 2,
     },
     productPrice: {
         fontSize: 14,

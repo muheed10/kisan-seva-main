@@ -1,50 +1,25 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState, useEffect } from 'react';
 import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Dummy Product Type
-interface Product {
-    id: string;
-    name: string;
-    price: string;
-    quantity: string;
-    image: string;
-}
-
-const MARKET_STORAGE_KEY = '@kisan_seva_marketplace';
-
-const DEFAULT_PRODUCTS: Product[] = [
-    { id: '1', name: 'Fresh Wheat', price: '₹2200/quintal', quantity: '50 Quintals', image: 'https://placehold.co/100x100/png' },
-    { id: '2', name: 'Organic Tomatoes', price: '₹40/kg', quantity: '200 kg', image: 'https://placehold.co/100x100/png' },
-    { id: '3', name: 'Basmati Rice', price: '₹6000/quintal', quantity: '20 Quintals', image: 'https://placehold.co/100x100/png' },
-];
+import { useUser } from '@clerk/clerk-expo';
+import { useProductContext } from '../context/ProductContext';
+import { Product } from '../types';
 
 export default function MarketScreen() {
-    const [products, setProducts] = useState<Product[]>([]);
+    const { user } = useUser();
+    const { products, addProduct, loadProducts } = useProductContext();
 
     const [modalVisible, setModalVisible] = useState(false);
     const [newProductName, setNewProductName] = useState('');
     const [newProductPrice, setNewProductPrice] = useState('');
     const [newProductQty, setNewProductQty] = useState('');
+    const [newProductContact, setNewProductContact] = useState('');
+    const [newProductLocation, setNewProductLocation] = useState('');
     const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         loadProducts();
     }, []);
-
-    const loadProducts = async () => {
-        try {
-            const stored = await AsyncStorage.getItem(MARKET_STORAGE_KEY);
-            if (stored) {
-                setProducts(JSON.parse(stored));
-            } else {
-                setProducts(DEFAULT_PRODUCTS);
-            }
-        } catch {
-            setProducts(DEFAULT_PRODUCTS);
-        }
-    };
 
     const handleRefresh = async () => {
         setRefreshing(true);
@@ -52,16 +27,8 @@ export default function MarketScreen() {
         setRefreshing(false);
     };
 
-    const saveProducts = async (updated: Product[]) => {
-        try {
-            await AsyncStorage.setItem(MARKET_STORAGE_KEY, JSON.stringify(updated));
-        } catch (err) {
-            console.error('Error saving products:', err);
-        }
-    };
-
-    const handleAddProduct = () => {
-        if (!newProductName || !newProductPrice || !newProductQty) {
+    const handleAddProduct = async () => {
+        if (!newProductName || !newProductPrice || !newProductQty || !newProductContact || !newProductLocation) {
             Alert.alert('Error', 'Please fill all fields');
             return;
         }
@@ -72,15 +39,18 @@ export default function MarketScreen() {
             price: `₹${newProductPrice}`,
             quantity: newProductQty,
             image: 'https://placehold.co/100x100/png',
+            contactNumber: newProductContact,
+            farmerId: user?.id || 'unknown',
+            location: newProductLocation,
         };
 
-        const updated = [newProduct, ...products];
-        setProducts(updated);
-        saveProducts(updated);
+        await addProduct(newProduct);
         setModalVisible(false);
         setNewProductName('');
         setNewProductPrice('');
         setNewProductQty('');
+        setNewProductContact('');
+        setNewProductLocation('');
     };
 
     const renderProduct = ({ item }: { item: Product }) => (
@@ -90,6 +60,7 @@ export default function MarketScreen() {
             </View>
             <View style={styles.cardContent}>
                 <Text style={styles.productName}>{item.name}</Text>
+                <Text style={styles.productDetails}>Location: <Text style={styles.bold}>{item.location || 'N/A'}</Text></Text>
                 <Text style={styles.productDetails}>Price: <Text style={styles.bold}>{item.price}</Text></Text>
                 <Text style={styles.productDetails}>Qty: <Text style={styles.bold}>{item.quantity}</Text></Text>
 
@@ -151,6 +122,21 @@ export default function MarketScreen() {
                             placeholder="Quantity (e.g. 10 kg)"
                             value={newProductQty}
                             onChangeText={setNewProductQty}
+                        />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Contact Number"
+                            keyboardType="phone-pad"
+                            value={newProductContact}
+                            onChangeText={setNewProductContact}
+                        />
+
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Location (e.g. Village, City)"
+                            value={newProductLocation}
+                            onChangeText={setNewProductLocation}
                         />
 
                         <View style={styles.modalButtons}>
